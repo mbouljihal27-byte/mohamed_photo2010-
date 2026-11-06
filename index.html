@@ -116,4 +116,67 @@ button:hover {
         NEXT
     </button>
 
-    <audio id="music" src="5-star.m4a" loop></audio
+    <audio id="music" src="5-star.m4a" loop></audio>
+
+</div>
+
+<!-- THIRD PAGE -->
+<div class="screen" id="three">
+
+    <h1>SALÉ 🇲🇦</h1>
+
+    <img src="sale.jpg" alt="Salé">
+
+    <p>Welcome to Salé</p>
+
+    <button onclick="next('four')">
+        START THE GAME
+    </button>
+
+</div>
+
+<!-- FOURTH PAGE -->
+<div class="screen" id="four">
+
+    <h1>🔥 LET'S PLAY 🔥</h1>
+
+    <p>MOHAMED PHOTO 20106</p>
+
+    <button onclick="startGame()">
+        START GAME 🚀
+    </button>
+
+</div>
+
+<script>
+
+function next(id) {
+
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+    });
+
+    document.getElementById(id).classList.add('active');
+
+}
+
+function playMusic() {
+
+    const music = document.getElementById('music');
+
+    music.play().catch(() => {
+        alert("Music could not be played. Check the audio file.");
+    });
+
+}
+
+function startGame() {
+
+    alert("Welcome to Mohamed Photo 20106!");
+
+}
+
+</script>
+
+</body>
+</html>
