@@ -3,269 +3,159 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mohamed Photo 20106</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON BLOCK</title>
 <style>
-body{margin:0;background:#080b12;color:white;font-family:Arial;text-align:center}
-h1{color:gold}
-button,select{padding:13px;margin:7px;border:0;border-radius:9px;font-weight:bold;font-size:16px}
-button{background:gold;cursor:pointer}
-select{background:#222;color:white}
-#game{display:none}
-canvas{width:95%;max-width:800px;border:3px solid gold;background:#315b3c;touch-action:none}
-#info{color:gold;font-size:20px;padding:10px}
-.controls button{width:65px}
+*{box-sizing:border-box}
+body{
+ margin:0;background:#050510;color:white;
+ font-family:Arial;text-align:center;
+}
+h1{
+ color:#00ffff;text-shadow:0 0 15px cyan;
+ letter-spacing:5px;
+}
+#game{
+ display:block;margin:15px auto;
+ background:#09091c;
+ border:2px solid #00ffff;
+ box-shadow:0 0 20px cyan;
+ border-radius:12px;
+ max-width:95vw;
+}
+button{
+ background:#09091c;color:#00ffff;
+ border:2px solid #00ffff;
+ padding:13px 25px;border-radius:10px;
+ margin:6px;font-weight:bold;
+ cursor:pointer;
+}
+button:active{background:#00ffff;color:black}
+#score{color:#ff00ff;font-size:22px}
 </style>
 </head>
 <body>
 
-<div id="menu">
-<h1>MOHAMED PHOTO 20106</h1>
-<h2>CHOOSE YOUR DIFFICULTY</h2>
-<select id="difficulty">
-<option value="0">EASY 🟢</option>
-<option value="1">NORMAL 🟡</option>
-<option value="2">HARD 🟠</option>
-<option value="3">EXTREME 🔴</option>
-<option value="4">IMPOSSIBLE ⚫</option>
-</select><br>
-<button onclick="start()">START GAME</button>
-</div>
+<h1>NEON BLOCK</h1>
+<p>SCORE: <span id="score">0</span></p>
 
-<div id="game">
-<h2>MY WORLD</h2>
-<div id="info"></div>
-<canvas id="c" width="800" height="480"></canvas>
-<div class="controls">
-<div><button onclick="move(0,-1)">⬆️</button></div>
-<div>
-<button onclick="move(-1,0)">⬅️</button>
-<button onclick="move(0,1)">⬇️</button>
-<button onclick="move(1,0)">➡️</button>
-</div>
-</div>
-<button onclick="restart()">RESTART</button>
-<button onclick="back()">MENU</button>
-</div>
+<canvas id="game" width="360" height="520"></canvas>
+
+<button onclick="start()">START / RESTART</button>
+<br>
+<button id="left">◀ LEFT</button>
+<button id="right">RIGHT ▶</button>
+
+<p>Use ARROW KEYS or A / D</p>
 
 <script>
-const c=document.getElementById("c");
-const ctx=c.getContext("2d");
-const T=40,W=20,H=12;
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
-let player={x:1,y:1};
-let exit={x:18,y:10};
-let enemies=[];
-let walls=[];
-let level=1;
-let difficulty=0;
+let player={x:160,y:455,w:40,h:40,speed:5};
+let blocks=[];
+let score=0;
 let running=false;
-let enemyTimer;
-
-const baseMap=[
-"####################",
-"#S...#.............#",
-"###..#.######.###..#",
-"#....#......#...#..#",
-"#.######.##.###.#..#",
-"#......#..#.....#..#",
-"####.#.#..#####.#..#",
-"#....#.#......#....#",
-"#.####.#####.####..#",
-"#......#.....#.....#",
-"#.................E#",
-"####################"
-];
-
-// Five valid stages based on a connected route.
-// All stages preserve the guaranteed route to E.
-function createMap(stage){
- let m=baseMap.map(r=>r.split(""));
- for(let i=0;i<stage;i++){
-  let x=8+i*2;
-  if(x<17){
-   // Add obstacles only in positions that do not block the main route.
-   if(m[3][x]===".")m[3][x]="#";
-  }
- }
- return m.map(r=>r.join(""));
-}
-
-let maps=Array.from({length:5},(_,i)=>createMap(i));
+let keys={};
+let left=false,right=false;
+let timer=0;
 
 function start(){
- difficulty=Number(document.getElementById("difficulty").value);
- document.getElementById("menu").style.display="none";
- document.getElementById("game").style.display="block";
- level=1;
+ player.x=160;
+ blocks=[];
+ score=0;
+ timer=0;
  running=true;
- loadLevel();
- startEnemies();
+ document.getElementById("score").textContent=0;
+ requestAnimationFrame(loop);
 }
 
-function loadLevel(){
- player={x:1,y:1};
- walls=[];
- enemies=[];
+document.addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+});
+document.addEventListener("keyup",e=>{
+ keys[e.key.toLowerCase()]=false;
+});
 
- maps[level-1].forEach((row,y)=>{
-  [...row].forEach((v,x)=>{
-   if(v==="#")walls.push({x,y});
-   if(v==="E")exit={x,y};
-  });
+function control(id,side){
+ const b=document.getElementById(id);
+ b.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  side(true);
  });
+ b.addEventListener("pointerup",()=>side(false));
+ b.addEventListener("pointerleave",()=>side(false));
+ b.addEventListener("pointercancel",()=>side(false));
+}
+control("left",v=>left=v);
+control("right",v=>right=v);
 
- let count=1+difficulty+level;
- for(let i=0;i<count;i++){
-  let x=5+(i*3)%10;
-  let y=2+(i*2)%7;
-  if(!blocked(x,y)&&!(x===player.x&&y===player.y)){
-   enemies.push({x,y,dir:1});
-  }
- }
-
- updateInfo();
- draw();
+function drawPlayer(){
+ ctx.shadowBlur=20;
+ ctx.shadowColor="#00ffff";
+ ctx.fillStyle="#00ffff";
+ ctx.fillRect(player.x,player.y,player.w,player.h);
+ ctx.shadowBlur=0;
 }
 
-function blocked(x,y){
- return walls.some(w=>w.x===x&&w.y===y);
-}
-
-function updateInfo(){
- const names=["EASY","NORMAL","HARD","EXTREME","IMPOSSIBLE"];
- document.getElementById("info").textContent=
- names[difficulty]+" | LEVEL "+level+"/5";
-}
-
-function move(dx,dy){
+function loop(){
  if(!running)return;
 
- let x=player.x+dx;
- let y=player.y+dy;
+ ctx.clearRect(0,0,360,520);
 
- if(x<0||y<0||x>=W||y>=H||blocked(x,y))return;
+ if(keys["arrowleft"]||keys["a"]||left)
+ player.x-=player.speed;
 
- player.x=x;
- player.y=y;
+ if(keys["arrowright"]||keys["d"]||right)
+ player.x+=player.speed;
 
- if(enemies.some(e=>e.x===x&&e.y===y)){
-  gameOver();
-  return;
- }
+ player.x=Math.max(0,Math.min(320,player.x));
 
- if(x===exit.x&&y===exit.y){
-  if(level===5){
-   running=false;
-   clearInterval(enemyTimer);
-   alert("🏆 YOU WON! CONGRATULATIONS!");
-   back();
-  }else{
-   level++;
-   loadLevel();
-  }
-  return;
- }
+ drawPlayer();
 
- draw();
-}
+ timer++;
 
-function draw(){
- ctx.clearRect(0,0,800,480);
- ctx.fillStyle="#315b3c";
- ctx.fillRect(0,0,800,480);
-
- for(let y=0;y<H;y++){
-  for(let x=0;x<W;x++){
-   ctx.strokeStyle="rgba(255,255,255,.07)";
-   ctx.strokeRect(x*T,y*T,T,T);
-  }
- }
-
- walls.forEach(w=>{
-  ctx.fillStyle="#242c39";
-  ctx.fillRect(w.x*T,w.y*T,T,T);
-  ctx.strokeStyle="#566477";
-  ctx.strokeRect(w.x*T,w.y*T,T,T);
- });
-
- ctx.fillStyle="gold";
- ctx.fillRect(exit.x*T+5,exit.y*T+5,30,30);
- ctx.fillStyle="black";
- ctx.font="20px Arial";
- ctx.fillText("E",exit.x*T+13,exit.y*T+27);
-
- enemies.forEach(e=>{
-  ctx.fillStyle="red";
-  ctx.beginPath();
-  ctx.arc(e.x*T+20,e.y*T+20,14,0,Math.PI*2);
-  ctx.fill();
- });
-
- ctx.fillStyle="#00d9ff";
- ctx.beginPath();
- ctx.arc(player.x*T+20,player.y*T+20,15,0,Math.PI*2);
- ctx.fill();
-}
-
-function startEnemies(){
- clearInterval(enemyTimer);
- let speed=Math.max(250,1100-difficulty*160-level*70);
-
- enemyTimer=setInterval(()=>{
-  if(!running)return;
-
-  enemies.forEach(e=>{
-   let nx=e.x+e.dir;
-
-   if(blocked(nx,e.y)||nx>=19||nx<=1){
-    e.dir*=-1;
-   }else{
-    e.x=nx;
-   }
+ if(timer%65===0){
+  blocks.push({
+   x:Math.random()*320,
+   y:-35,
+   w:35,h:35,
+   speed:2+score/100
   });
+ }
 
-  if(enemies.some(e=>e.x===player.x&&e.y===player.y)){
-   gameOver();
-   return;
+ blocks.forEach((b,i)=>{
+  b.y+=b.speed;
+
+  ctx.shadowBlur=15;
+  ctx.shadowColor="#ff00ff";
+  ctx.fillStyle="#ff00ff";
+  ctx.fillRect(b.x,b.y,b.w,b.h);
+  ctx.shadowBlur=0;
+
+  if(
+   player.x<b.x+b.w &&
+   player.x+player.w>b.x &&
+   player.y<b.y+b.h &&
+   player.y+player.h>b.y
+  ){
+   running=false;
+   alert("GAME OVER! SCORE: "+score);
   }
 
-  draw();
- },speed);
+  if(b.y>520){
+   blocks.splice(i,1);
+   score+=10;
+   document.getElementById("score").textContent=score;
+  }
+ });
+
+ requestAnimationFrame(loop);
 }
 
-function gameOver(){
- running=false;
- clearInterval(enemyTimer);
- alert("GAME OVER! TRY AGAIN");
-}
-
-function restart(){
- clearInterval(enemyTimer);
- level=1;
- running=true;
- loadLevel();
- startEnemies();
-}
-
-function back(){
- running=false;
- clearInterval(enemyTimer);
- document.getElementById("game").style.display="none";
- document.getElementById("menu").style.display="block";
-}
-
-window.addEventListener("keydown",e=>{
- const d={
- ArrowUp:[0,-1],ArrowDown:[0,1],
- ArrowLeft:[-1,0],ArrowRight:[1,0],
- w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]
- };
- if(d[e.key]){
-  e.preventDefault();
-  move(...d[e.key]);
- }
-});
+ctx.fillStyle="white";
+ctx.font="20px Arial";
+ctx.fillText("PRESS START",115,250);
 </script>
 </body>
 </html>
