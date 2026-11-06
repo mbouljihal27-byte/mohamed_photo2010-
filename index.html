@@ -1,6 +1,5 @@
-```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -8,234 +7,510 @@
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#080b16;color:white;
- font-family:Arial;text-align:center;
+ margin:0;background:#080d19;color:white;
+ font-family:Arial;text-align:center
 }
 h1{color:#00eaff;text-shadow:0 0 15px #00eaff}
-button,input{
- padding:13px;margin:6px;border:0;
- border-radius:9px;font-weight:bold;
-}
-button{background:#00eaff;cursor:pointer}
-button:hover{background:white}
-input{background:#202b40;color:white}
-.page{padding-top:60px}
+.page{padding:20px}
 .hidden{display:none!important}
+.box{
+ background:#142139;padding:20px;
+ border-radius:15px;max-width:440px;
+ margin:20px auto
+}
+button,input{
+ padding:12px;margin:5px;border:0;
+ border-radius:9px;font-size:15px
+}
+button{
+ background:#00dfff;color:#00121c;
+ font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.5}
+input{
+ background:#1b2940;color:white;
+ text-align:center;width:220px
+}
 .board{
- display:grid;grid-template-columns:repeat(9,1fr);
- gap:4px;width:min(92vw,450px);margin:20px auto;
+ direction:ltr;
+ position:relative;
+ width:min(94vw,450px);
+ aspect-ratio:1;
+ margin:20px auto;
+ display:grid;
+ grid-template-columns:repeat(9,1fr);
+ grid-template-rows:repeat(9,1fr);
+ gap:4px
 }
 .cell{
- aspect-ratio:1;background:#17243a;
- border:1px solid #263958;border-radius:5px;
- cursor:pointer;
+ background:#1c2b43;
+ border:1px solid #354b68;
+ border-radius:5px;
+ cursor:pointer;position:relative
 }
-.blue{background:#00d9ff!important;border-radius:50%}
-.red{background:#ff287b!important;border-radius:50%}
-.wall{background:#ffe600!important}
+.blue:after,.red:after{
+ content:"";position:absolute;
+ width:65%;height:65%;left:17.5%;top:17.5%;
+ border-radius:50%
+}
+.blue:after{
+ background:#00dfff;
+ box-shadow:0 0 12px #00dfff
+}
+.red:after{
+ background:#ff287b;
+ box-shadow:0 0 12px #ff287b
+}
+.wall{
+ position:absolute;background:#ffe600;
+ border-radius:4px;
+ box-shadow:0 0 10px #ffe600;
+ z-index:5;pointer-events:none
+}
 #status{color:#ffe600;font-size:18px}
+#info{color:#aebed2;font-size:13px}
 </style>
 </head>
 <body>
 
-<section id="login" class="page">
+<section id="menu" class="page">
 <h1>⚡ NEON BLOCK ⚡</h1>
-<h2>WELCOME PLAYER</h2>
-<input id="username" placeholder="Enter your name">
+
+<div class="box">
+<h2>مرحبا بك في اللعبة</h2>
+<input id="name" placeholder="اسم اللاعب">
+
 <br>
-<button id="join">JOIN GAME</button>
-</section>
+<button id="offline">👥 لاعبان</button>
+<button id="robot">🤖 ضد الكمبيوتر</button>
 
-<section id="home" class="page hidden">
-<h1>NEON BLOCK</h1>
-<h2 id="welcome"></h2>
-<button id="offline">📴 OFFLINE</button>
-<button id="robot">🤖 VS ROBOT</button>
-<button id="online">🌐 ONLINE</button>
-</section>
+<hr>
 
-<section id="game" class="hidden">
-<h1>⚡ NEON BLOCK ⚡</h1>
-<div id="status"></div>
-<div>
-<button id="move">MOVE</button>
-<button id="horizontal">H WALL</button>
-<button id="vertical">V WALL</button>
+<h3>🌐 اللعب عبر الإنترنت</h3>
+<button id="create">إنشاء غرفة</button>
+<br>
+<input id="roomCode" placeholder="رمز الغرفة">
+<button id="join">دخول الغرفة</button>
+
+<p id="message">اختر طريقة اللعب</p>
 </div>
-<div class="board" id="board"></div>
-<button id="restart">NEW GAME</button>
-<button id="homeBtn">HOME</button>
 </section>
 
-<script>
+<section id="game" class="page hidden">
+<h1>⚡ NEON BLOCK ⚡</h1>
+<p id="status"></p>
+<p id="info"></p>
+
+<button id="move">🚶 حركة</button>
+<button id="horizontal">🟨 حاجز أفقي</button>
+<button id="vertical">🟪 حاجز عمودي</button>
+
+<div id="board" class="board"></div>
+
+<button id="restart">🔄 إعادة اللعب</button>
+<button id="home">🏠 القائمة</button>
+</section>
+
+<script type="module">
+import {initializeApp}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+ getDatabase,ref,set,onValue,runTransaction,push
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+import {
+ getAuth,signInAnonymously
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+/* ضع معلومات Firebase الخاصة بك هنا */
+const firebaseConfig={
+ apiKey:"YOUR_API_KEY",
+ authDomain:"YOUR_PROJECT.firebaseapp.com",
+ databaseURL:"YOUR_DATABASE_URL",
+ projectId:"YOUR_PROJECT_ID",
+ storageBucket:"YOUR_PROJECT.appspot.com",
+ messagingSenderId:"YOUR_SENDER_ID",
+ appId:"YOUR_APP_ID"
+};
+
 const $=id=>document.getElementById(id);
 
-let username="";
-let gameMode="";
+let db=null,uid=null;
+let room=null,player=0;
+let gameMode="offline";
 let mode="move";
+let state=null;
+let unsubscribe=null;
+let onlineReady=false;
+
+let players=[];
+let walls=[];
+let remaining=[10,10];
 let turn=0;
 let finished=false;
-let walls=[];
-let players=[];
 
-function show(page){
- ["login","home","game"].forEach(id=>$(id).classList.add("hidden"));
- $(page).classList.remove("hidden");
+function msg(t){$("message").textContent=t}
+
+function showGame(){
+ $("menu").classList.add("hidden");
+ $("game").classList.remove("hidden");
 }
 
-$("join").addEventListener("click",()=>{
- let value=$("username").value.trim();
+function showMenu(){
+ $("game").classList.add("hidden");
+ $("menu").classList.remove("hidden");
+ if(unsubscribe)unsubscribe();
+ unsubscribe=null;
+}
 
- if(!value){
-  alert("PLEASE ENTER YOUR NAME");
+function emptyGame(name){
+ return {
+  players:[
+   {name:name,r:8,c:4},
+   null
+  ],
+  walls:[],
+  remaining:[10,10],
+  turn:0,
+  finished:false,
+  winner:null
+ };
+}
+
+/* Firebase */
+async function connectFirebase(){
+ if(firebaseConfig.apiKey==="YOUR_API_KEY"){
+  msg("خاصك تضيف معلومات Firebase أولا.");
   return;
  }
 
- username=value;
- localStorage.setItem("neonPlayer",username);
- $("welcome").textContent="WELCOME "+username+"!";
- show("home");
-});
-
-function start(type){
- gameMode=type;
- show("game");
- resetGame();
-
- if(type==="online"){
-  alert("ONLINE MODE IS NOT CONNECTED YET. THIS IS A LOCAL DEMO.");
+ try{
+  const app=initializeApp(firebaseConfig);
+  db=getDatabase(app);
+  const auth=getAuth(app);
+  const result=await signInAnonymously(auth);
+  uid=result.user.uid;
+  onlineReady=true;
+  msg("✅ الاتصال جاهز!");
+ }catch(e){
+  msg("خطأ Firebase: "+e.message);
+  console.error(e);
  }
 }
 
-$("offline").onclick=()=>start("offline");
-$("robot").onclick=()=>start("robot");
-$("online").onclick=()=>start("online");
+await connectFirebase();
 
-$("move").onclick=()=>mode="move";
-$("horizontal").onclick=()=>mode="horizontal";
-$("vertical").onclick=()=>mode="vertical";
+/* أنماط اللعب */
+$("offline").onclick=()=>{
+ gameMode="offline";
+ startLocal();
+};
 
-$("restart").onclick=resetGame;
-$("homeBtn").onclick=()=>show("home");
+$("robot").onclick=()=>{
+ gameMode="robot";
+ startLocal();
+};
 
-function resetGame(){
+function startLocal(){
  players=[
-  {r:8,c:4,color:"blue",goal:0},
-  {r:0,c:4,color:"red",goal:8}
+  {name:$("name").value.trim()||"الأزرق",r:8,c:4},
+  {name:gameMode==="robot"?"الكمبيوتر":"الأحمر",r:0,c:4}
  ];
  walls=[];
+ remaining=[10,10];
  turn=0;
  finished=false;
  mode="move";
+ showGame();
  draw();
 }
 
-function blocked(r1,c1,r2,c2){
- return walls.some(w=>{
-  if(w.type==="horizontal"){
-   return r1!==r2&&Math.min(r1,r2)===w.r&&
-   (c1===w.c||c1===w.c+1);
-  }
-  return c1!==c2&&Math.min(c1,c2)===w.c&&
-  (r1===w.r||r1===w.r+1);
- });
-}
-
-function draw(){
- $("board").innerHTML="";
-
- for(let r=0;r<9;r++){
-  for(let c=0;c<9;c++){
-   let cell=document.createElement("div");
-   cell.className="cell";
-
-   players.forEach(p=>{
-    if(p.r===r&&p.c===c)cell.classList.add(p.color);
-   });
-
-   walls.forEach(w=>{
-    if(w.r===r&&w.c===c)cell.classList.add("wall");
-   });
-
-   cell.addEventListener("click",()=>clickCell(r,c));
-   $("board").appendChild(cell);
-  }
+/* إنشاء غرفة Online */
+$("create").onclick=async()=>{
+ if(!onlineReady){
+  msg("أضف معلومات Firebase وفعّل Anonymous Authentication.");
+  return;
  }
 
- $("status").textContent=finished?
- "GAME OVER":
- (turn===0?"BLUE":"RED")+" PLAYER TURN";
-}
+ const name=$("name").value.trim();
+ if(!name){msg("اكتب اسمك أولا");return;}
 
-function clickCell(r,c){
- if(finished)return;
+ try{
+  const roomRef=push(ref(db,"rooms"));
+  room=roomRef.key;
+  player=0;
 
- let p=players[turn];
+  await set(roomRef,emptyGame(name));
+  enterOnline();
+ }catch(e){
+  msg("تعذر إنشاء الغرفة: "+e.message);
+ }
+};
 
- if(mode==="move"){
-  if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
-  if(blocked(p.r,p.c,r,c))return;
-  if(players.some(x=>x.r===r&&x.c===c))return;
+/* دخول غرفة Online */
+$("join").onclick=async()=>{
+ if(!onlineReady){
+  msg("Firebase غير متصل. راجع الإعدادات.");
+  return;
+ }
 
-  p.r=r;
-  p.c=c;
+ const name=$("name").value.trim();
+ const code=$("roomCode").value.trim();
 
-  if(p.r===p.goal){
-   finished=true;
-   draw();
-   alert(p.color.toUpperCase()+" WINS!");
+ if(!name||!code){
+  msg("اكتب الاسم ورمز الغرفة");
+  return;
+ }
+
+ try{
+  let joined=false;
+
+  const result=await runTransaction(
+   ref(db,"rooms/"+code),
+   current=>{
+    if(!current||!current.players||current.players[1])return;
+
+    current.players[1]={
+     name:name,r:0,c:4
+    };
+    joined=true;
+    return current;
+   }
+  );
+
+  if(!result.committed){
+   msg("الغرفة غير موجودة أو ممتلئة");
    return;
   }
 
- }else{
-  if(r>=8||c>=8)return;
-  if(walls.some(w=>w.r===r&&w.c===c))return;
+  room=code;
+  player=1;
+  enterOnline();
+ }catch(e){
+  msg("تعذر الدخول: "+e.message);
+ }
+};
 
-  walls.push({r,c,type:mode});
+function enterOnline(){
+ gameMode="online";
+ showGame();
+
+ $("info").textContent="رمز الغرفة: "+room;
+
+ if(unsubscribe)unsubscribe();
+
+ unsubscribe=onValue(ref(db,"rooms/"+room),snap=>{
+  state=snap.val();
+
+  if(!state)return;
+
+  players=state.players;
+  walls=state.walls||[];
+  remaining=state.remaining||[10,10];
+  turn=state.turn;
+  finished=state.finished;
+
+  draw();
+ });
+}
+
+/* الحواجز */
+function edge(a,b){
+ return [a.join(","),b.join(",")].sort().join("|");
+}
+
+function blocked(r,c,nr,nc,list=walls){
+ const k=edge([r,c],[nr,nc]);
+ return list.some(w=>w.edges.includes(k));
+}
+
+function makeWall(r,c,type,list=walls){
+ if(r<0||r>7||c<0||c>7)return null;
+
+ const edges=type==="h"?[
+  edge([r,c],[r+1,c]),
+  edge([r,c+1],[r+1,c+1])
+ ]:[
+  edge([r,c],[r,c+1]),
+  edge([r+1,c],[r+1,c+1])
+ ];
+
+ if(list.some(w=>w.edges.some(e=>edges.includes(e))))return null;
+
+ if(list.some(w=>w.r===r&&w.c===c&&w.type!==type))return null;
+
+ return {r,c,type,edges};
+}
+
+/* التحقق من بقاء طريق للفوز */
+function hasPath(index,list,ps){
+ const p=ps[index];
+ const goal=index===0?0:8;
+ const queue=[[p.r,p.c]];
+ const seen=new Set([p.r+","+p.c]);
+
+ while(queue.length){
+  const [r,c]=queue.shift();
+
+  if(r===goal)return true;
+
+  for(const [nr,nc] of [
+   [r+1,c],[r-1,c],[r,c+1],[r,c-1]
+  ]){
+   if(nr<0||nr>8||nc<0||nc>8)continue;
+   if(blocked(r,c,nr,nc,list))continue;
+
+   const k=nr+","+nc;
+
+   if(!seen.has(k)){
+    seen.add(k);
+    queue.push([nr,nc]);
+   }
+  }
+ }
+
+ return false;
+}
+
+/* الحركة ووضع الحواجز */
+async function action(r,c){
+ if(finished)return;
+
+ if(gameMode==="online"){
+  if(turn!==player)return;
+
+  await runTransaction(ref(db,"rooms/"+room),current=>{
+   if(!current||current.finished||current.turn!==player)return;
+
+   const ps=current.players;
+   const list=current.walls||[];
+   const p=ps[player];
+
+   if(mode==="move"){
+    if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
+    if(ps.some((x,i)=>i!==player&&x&&x.r===r&&x.c===c))return;
+    if(blocked(p.r,p.c,r,c,list))return;
+
+    p.r=r;p.c=c;
+
+    if(r===(player===0?0:8)){
+     current.finished=true;
+     current.winner=player;
+    }
+   }else{
+    if(current.remaining[player]<=0)return;
+
+    const w=makeWall(r,c,mode,list);
+    if(!w)return;
+
+    const next=[...list,w];
+
+    if(!hasPath(0,next,ps)||!hasPath(1,next,ps))return;
+
+    current.walls=next;
+    current.remaining[player]--;
+   }
+
+   current.turn=1-player;
+   return current;
+  });
+
+  return;
+ }
+
+ localAction(r,c);
+}
+
+function localAction(r,c){
+ const p=players[turn];
+
+ if(mode==="move"){
+  if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
+
+  if(players.some((x,i)=>i!==turn&&x.r===r&&x.c===c))return;
+  if(blocked(p.r,p.c,r,c))return;
+
+  p.r=r;p.c=c;
+
+  if(r===(turn===0?0:8)){
+   finished=true;
+   draw();
+   $("status").textContent="🏆 الفائز: "+p.name;
+   return;
+  }
+ }else{
+  if(remaining[turn]<=0)return;
+
+  const w=makeWall(r,c,mode);
+  if(!w){
+   msg("لا يمكن وضع الحاجز هنا");
+   return;
+  }
+
+  walls.push(w);
+
+  if(!hasPath(0,walls,players)||!hasPath(1,walls,players)){
+   walls.pop();
+   msg("يجب ترك طريق للاعبين");
+   return;
+  }
+
+  remaining[turn]--;
  }
 
  turn=1-turn;
+ mode="move";
  draw();
 
  if(gameMode==="robot"&&turn===1&&!finished){
-  setTimeout(robotMove,350);
+  setTimeout(robotMove,500);
  }
 }
 
+/* الكمبيوتر */
 function robotMove(){
  if(finished)return;
 
- let p=players[1];
-
- let options=[
-  [p.r+1,p.c],
-  [p.r-1,p.c],
-  [p.r,p.c+1],
-  [p.r,p.c-1]
+ const p=players[1];
+ const options=[
+  [p.r+1,p.c],[p.r-1,p.c],
+  [p.r,p.c+1],[p.r,p.c-1]
  ];
 
- options=options.filter(([r,c])=>
-  r>=0&&r<9&&c>=0&&c<9&&
-  !blocked(p.r,p.c,r,c)&&
-  !players.some(x=>x.r===r&&x.c===c)
- );
+ let best=null;
+ let distance=Infinity;
 
- if(!options.length){
+ for(const [r,c] of options){
+  if(r<0||r>8||c<0||c>8)continue;
+  if(blocked(p.r,p.c,r,c))continue;
+  if(players[0].r===r&&players[0].c===c)continue;
+
+  const oldR=p.r,oldC=p.c;
+  p.r=r;p.c=c;
+
+  const d=shortestPath(1);
+
+  p.r=oldR;p.c=oldC;
+
+  if(d<distance){
+   distance=d;
+   best=[r,c];
+  }
+ }
+
+ if(!best){
   turn=0;
   draw();
   return;
  }
 
- options.sort((a,b)=>Math.abs(a[0]-8)-Math.abs(b[0]-8));
-
- let [r,c]=options[0];
- p.r=r;
- p.c=c;
+ p.r=best[0];p.c=best[1];
 
  if(p.r===8){
   finished=true;
   draw();
-  alert("ROBOT WINS!");
+  $("status").textContent="🏆 الكمبيوتر فاز!";
   return;
  }
 
@@ -243,17 +518,100 @@ function robotMove(){
  draw();
 }
 
-let saved=localStorage.getItem("neonPlayer");
+function shortestPath(index){
+ const p=players[index];
+ const goal=index===0?0:8;
+ const queue=[[p.r,p.c,0]];
+ const seen=new Set([p.r+","+p.c]);
 
-if(saved){
- username=saved;
- $("welcome").textContent="WELCOME "+username+"!";
- show("home");
+ while(queue.length){
+  const [r,c,d]=queue.shift();
+  if(r===goal)return d;
+
+  for(const [nr,nc] of [
+   [r+1,c],[r-1,c],[r,c+1],[r,c-1]
+  ]){
+   if(nr<0||nr>8||nc<0||nc>8)continue;
+   if(blocked(r,c,nr,nc))continue;
+
+   const k=nr+","+nc;
+   if(!seen.has(k)){
+    seen.add(k);
+    queue.push([nr,nc,d+1]);
+   }
+  }
+ }
+
+ return 99;
 }
+
+/* رسم اللعبة */
+function draw(){
+ const board=$("board");
+ board.innerHTML="";
+
+ for(let r=0;r<9;r++){
+  for(let c=0;c<9;c++){
+   const cell=document.createElement("div");
+   cell.className="cell";
+
+   players.forEach((p,i)=>{
+    if(p&&p.r===r&&p.c===c){
+     cell.classList.add(i===0?"blue":"red");
+    }
+   });
+
+   cell.onclick=()=>action(r,c);
+   board.appendChild(cell);
+  }
+ }
+
+ walls.forEach(w=>{
+  const el=document.createElement("div");
+  el.className="wall";
+
+  if(w.type==="h"){
+   el.style.left=(w.c*100/9)+"%";
+   el.style.top=((w.r+1)*100/9-1)+"%";
+   el.style.width=(200/9)+"%";
+   el.style.height="3%";
+  }else{
+   el.style.left=((w.c+1)*100/9-1)+"%";
+   el.style.top=(w.r*100/9)+"%";
+   el.style.width="3%";
+   el.style.height=(200/9)+"%";
+  }
+
+  board.appendChild(el);
+ });
+
+ if(finished){
+  $("status").textContent="🏆 انتهت اللعبة!";
+ }else{
+  $("status").textContent=
+   "دور: "+(players[turn]?.name||"في انتظار اللاعب");
+ }
+
+ $("info").textContent=
+  "حواجز الأزرق: "+remaining[0]+
+  " | حواجز الأحمر: "+remaining[1];
+}
+
+/* أزرار التحكم */
+$("move").onclick=()=>{mode="move";};
+$("horizontal").onclick=()=>{mode="h";};
+$("vertical").onclick=()=>{mode="v";};
+
+$("restart").onclick=()=>{
+ if(gameMode==="online"){
+  msg("إعادة اللعب عبر الإنترنت تحتاج إعادة إنشاء الغرفة.");
+ }else{
+  startLocal();
+ }
+};
+
+$("home").onclick=showMenu;
+
 </script>
 </body>
 </html>
-```
-</body>
-</html>
-```
