@@ -1,617 +1,509 @@
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEON BLOCK</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;background:#080d19;color:white;
- font-family:Arial;text-align:center
-}
-h1{color:#00eaff;text-shadow:0 0 15px #00eaff}
-.page{padding:20px}
+body{margin:0;background:#080d18;color:#fff;font-family:Arial;text-align:center}
+header{padding:17px;background:#101b30;border-bottom:2px solid #12d9ff}
+h1{margin:0;color:#12d9ff;letter-spacing:3px}
+.panel{background:#111d32;border:1px solid #263d5c;border-radius:15px;padding:14px;margin:13px auto;max-width:650px}
+button{border:0;border-radius:10px;padding:12px 16px;margin:4px;background:#087fe5;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.4}
+button:active{transform:scale(.97)}
+input{max-width:95%;padding:10px}
 .hidden{display:none!important}
-.box{
- background:#142139;padding:20px;
- border-radius:15px;max-width:440px;
- margin:20px auto
-}
-button,input{
- padding:12px;margin:5px;border:0;
- border-radius:9px;font-size:15px
-}
-button{
- background:#00dfff;color:#00121c;
- font-weight:bold;cursor:pointer
-}
-button:disabled{opacity:.5}
-input{
- background:#1b2940;color:white;
- text-align:center;width:220px
-}
-.board{
- direction:ltr;
- position:relative;
- width:min(94vw,450px);
- aspect-ratio:1;
- margin:20px auto;
- display:grid;
- grid-template-columns:repeat(9,1fr);
- grid-template-rows:repeat(9,1fr);
- gap:4px
-}
-.cell{
- background:#1c2b43;
- border:1px solid #354b68;
- border-radius:5px;
- cursor:pointer;position:relative
-}
-.blue:after,.red:after{
- content:"";position:absolute;
- width:65%;height:65%;left:17.5%;top:17.5%;
- border-radius:50%
-}
-.blue:after{
- background:#00dfff;
- box-shadow:0 0 12px #00dfff
-}
-.red:after{
- background:#ff287b;
- box-shadow:0 0 12px #ff287b
-}
-.wall{
- position:absolute;background:#ffe600;
- border-radius:4px;
- box-shadow:0 0 10px #ffe600;
- z-index:5;pointer-events:none
-}
-#status{color:#ffe600;font-size:18px}
-#info{color:#aebed2;font-size:13px}
+#intro{padding:25px 12px}
+#profile{width:145px;height:145px;border-radius:50%;object-fit:cover;border:4px solid #12d9ff;background:#24354e;display:block;margin:15px auto}
+#board{direction:ltr;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;width:min(94vw,470px);margin:18px auto}
+.cell{position:relative;aspect-ratio:1;min-width:0;padding:0;background:#293951;border:2px solid transparent;border-radius:5px}
+.cell.blue{background:#087fe5;border-radius:50%;border:3px solid #a6e6ff}
+.cell.red{background:#ed405b;border-radius:50%;border:3px solid #ffc0c8}
+.cell.wh{border-bottom:6px solid #ffc22f}
+.cell.wv{border-right:6px solid #ffc22f}
+.players{display:flex;justify-content:space-around;gap:8px;flex-wrap:wrap}
+.player{background:#1a2b45;border-radius:12px;padding:12px;min-width:125px}
+.tools{display:flex;justify-content:center;flex-wrap:wrap;gap:5px}
+.active{background:#f2bd36;color:#111}
+.info{font-size:14px;color:#bdcbe0;line-height:1.8}
+#message{color:#ffd65b;min-height:25px;font-weight:bold}
+#history{text-align:right;max-height:150px;overflow:auto;font-size:14px;line-height:1.8}
+.avatar{font-size:26px}
+footer{color:#8292aa;padding:15px;font-size:12px}
 </style>
 </head>
 <body>
 
-<section id="menu" class="page">
-<h1>⚡ NEON BLOCK ⚡</h1>
+<header>
+<h1>NEON BLOCK</h1>
+<p>التحدي يبدأ الآن 🏆</p>
+</header>
 
-<div class="box">
-<h2>مرحبا بك في اللعبة</h2>
-<input id="name" placeholder="اسم اللاعب">
+<!-- شاشة البداية -->
+<section id="intro" class="panel">
+<h2>مرحبا بك في NEON BLOCK</h2>
+<img id="profile" alt="صورتك الشخصية">
+<p>اختار صورتك الشخصية</p>
+<input type="file" id="photoInput" accept="image/*">
+<br><br>
+<button id="startBtn">ابدأ اللعبة 🎮</button>
+<p class="info">اختار صورتك ثم اضغط على ابدأ اللعبة.</p>
+</section>
 
-<br>
-<button id="offline">👥 لاعبان</button>
-<button id="robot">🤖 ضد الكمبيوتر</button>
-
-<hr>
-
-<h3>🌐 اللعب عبر الإنترنت</h3>
-<button id="create">إنشاء غرفة</button>
-<br>
-<input id="roomCode" placeholder="رمز الغرفة">
-<button id="join">دخول الغرفة</button>
-
-<p id="message">اختر طريقة اللعب</p>
+<!-- اللعبة -->
+<main id="game" class="hidden">
+<div class="panel">
+<div class="players">
+<div class="player">
+<div class="avatar">🔵</div>
+<strong>اللاعب الأزرق</strong>
+<p>الانتصارات: <span id="wins0">0</span></p>
+<p>الحواجز: <span id="walls0">10</span></p>
 </div>
-</section>
+<div class="player">
+<div class="avatar">🔴</div>
+<strong id="redName">اللاعب الأحمر</strong>
+<p>الانتصارات: <span id="wins1">0</span></p>
+<p>الحواجز: <span id="walls1">10</span></p>
+</div>
+</div>
+</div>
 
-<section id="game" class="page hidden">
-<h1>⚡ NEON BLOCK ⚡</h1>
-<p id="status"></p>
-<p id="info"></p>
+<div class="panel">
+<div class="tools">
+<button id="localBtn">👥 لاعبان</button>
+<button id="aiBtn">🤖 ضد الكمبيوتر</button>
+<button id="musicBtn">🎵 تشغيل الموسيقى</button>
+<button id="homeBtn">🏠 البداية</button>
+</div>
+<p id="modeText" class="info">النمط: لاعبان</p>
+</div>
 
-<button id="move">🚶 حركة</button>
-<button id="horizontal">🟨 حاجز أفقي</button>
-<button id="vertical">🟪 حاجز عمودي</button>
+<div class="panel">
+<h3 id="turn">دور اللاعب الأزرق 🔵</h3>
+<p id="message">حرّك لاعبك نحو الجهة المقابلة.</p>
+<div id="board"></div>
+<div class="tools">
+<button id="moveBtn" class="active">🚶 الحركة</button>
+<button id="hBtn">🟨 حاجز أفقي</button>
+<button id="vBtn">🟨 حاجز عمودي</button>
+<button id="newBtn">🔄 جولة جديدة</button>
+</div>
+<p class="info">
+اختار الحركة ثم اضغط على خانة مجاورة.<br>
+الحاجز الأفقي أو العمودي كيسد جوج طرق.<br>
+مايمكنش تسد الطريق كامل على الخصم.
+</p>
+</div>
 
-<div id="board" class="board"></div>
+<div class="panel">
+<h3>🏆 النتائج</h3>
+<p>عدد الجولات: <span id="rounds">0</span></p>
+<p>انتصارات الأزرق: <span id="total0">0</span></p>
+<p>انتصارات الأحمر: <span id="total1">0</span></p>
+<h4>سجل الجولات</h4>
+<div id="history">لا توجد نتائج بعد.</div>
+<button id="clearBtn">مسح النتائج</button>
+</div>
+</main>
 
-<button id="restart">🔄 إعادة اللعب</button>
-<button id="home">🏠 القائمة</button>
-</section>
+<footer>NEON BLOCK © 2026</footer>
 
-<script type="module">
-import {initializeApp}
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+<audio id="song" src="5-star.mp3" loop preload="auto"></audio>
 
-import {
- getDatabase,ref,set,onValue,runTransaction,push
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-import {
- getAuth,signInAnonymously
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-/* ضع معلومات Firebase الخاصة بك هنا */
-const firebaseConfig={
- apiKey:"YOUR_API_KEY",
- authDomain:"YOUR_PROJECT.firebaseapp.com",
- databaseURL:"YOUR_DATABASE_URL",
- projectId:"YOUR_PROJECT_ID",
- storageBucket:"YOUR_PROJECT.appspot.com",
- messagingSenderId:"YOUR_SENDER_ID",
- appId:"YOUR_APP_ID"
-};
-
+<script>
 const $=id=>document.getElementById(id);
 
-let db=null,uid=null;
-let room=null,player=0;
-let gameMode="offline";
-let mode="move";
-let state=null;
-let unsubscribe=null;
-let onlineReady=false;
-
-let players=[];
-let walls=[];
-let remaining=[10,10];
+let mode="local";
 let turn=0;
-let finished=false;
+let selected="move";
+let gameOver=false;
+let positions=[{r:0,c:4},{r:8,c:4}];
+let walls=[10,10];
+let blocked=new Set();
+let placed=[];
 
-function msg(t){$("message").textContent=t}
-
-function showGame(){
- $("menu").classList.add("hidden");
- $("game").classList.remove("hidden");
+let stats;
+try{
+ stats=JSON.parse(localStorage.getItem("neonStats"))||
+ {wins:[0,0],rounds:0,history:[]};
+}catch(e){
+ stats={wins:[0,0],rounds:0,history:[]};
 }
 
-function showMenu(){
- $("game").classList.add("hidden");
- $("menu").classList.remove("hidden");
- if(unsubscribe)unsubscribe();
- unsubscribe=null;
+function save(){
+ localStorage.setItem("neonStats",JSON.stringify(stats));
+ updateStats();
 }
 
-function emptyGame(name){
- return {
-  players:[
-   {name:name,r:8,c:4},
-   null
-  ],
-  walls:[],
-  remaining:[10,10],
-  turn:0,
-  finished:false,
-  winner:null
+function updateStats(){
+ $("wins0").textContent=stats.wins[0];
+ $("wins1").textContent=stats.wins[1];
+ $("total0").textContent=stats.wins[0];
+ $("total1").textContent=stats.wins[1];
+ $("rounds").textContent=stats.rounds;
+ $("walls0").textContent=walls[0];
+ $("walls1").textContent=walls[1];
+
+ $("history").textContent="";
+ if(stats.history.length===0){
+  $("history").textContent="لا توجد نتائج بعد.";
+ }else{
+  stats.history.forEach(item=>{
+   let div=document.createElement("div");
+   div.textContent="🏆 "+item;
+   $("history").appendChild(div);
+  });
+ }
+}
+
+$("photoInput").addEventListener("change",e=>{
+ const file=e.target.files[0];
+ if(!file)return;
+ if(!file.type.startsWith("image/"))return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  $("profile").src=reader.result;
  };
-}
+ reader.readAsDataURL(file);
+});
 
-/* Firebase */
-async function connectFirebase(){
- if(firebaseConfig.apiKey==="YOUR_API_KEY"){
-  msg("خاصك تضيف معلومات Firebase أولا.");
-  return;
- }
-
- try{
-  const app=initializeApp(firebaseConfig);
-  db=getDatabase(app);
-  const auth=getAuth(app);
-  const result=await signInAnonymously(auth);
-  uid=result.user.uid;
-  onlineReady=true;
-  msg("✅ الاتصال جاهز!");
- }catch(e){
-  msg("خطأ Firebase: "+e.message);
-  console.error(e);
- }
-}
-
-await connectFirebase();
-
-/* أنماط اللعب */
-$("offline").onclick=()=>{
- gameMode="offline";
- startLocal();
+$("startBtn").onclick=()=>{
+ $("intro").classList.add("hidden");
+ $("game").classList.remove("hidden");
+ render();
 };
 
-$("robot").onclick=()=>{
- gameMode="robot";
- startLocal();
+$("homeBtn").onclick=()=>{
+ $("game").classList.add("hidden");
+ $("intro").classList.remove("hidden");
 };
 
-function startLocal(){
- players=[
-  {name:$("name").value.trim()||"الأزرق",r:8,c:4},
-  {name:gameMode==="robot"?"الكمبيوتر":"الأحمر",r:0,c:4}
- ];
- walls=[];
- remaining=[10,10];
- turn=0;
- finished=false;
- mode="move";
- showGame();
- draw();
+function key(a,b){
+ return [a.r+","+a.c,b.r+","+b.c].sort().join("|");
 }
 
-/* إنشاء غرفة Online */
-$("create").onclick=async()=>{
- if(!onlineReady){
-  msg("أضف معلومات Firebase وفعّل Anonymous Authentication.");
-  return;
- }
-
- const name=$("name").value.trim();
- if(!name){msg("اكتب اسمك أولا");return;}
-
- try{
-  const roomRef=push(ref(db,"rooms"));
-  room=roomRef.key;
-  player=0;
-
-  await set(roomRef,emptyGame(name));
-  enterOnline();
- }catch(e){
-  msg("تعذر إنشاء الغرفة: "+e.message);
- }
-};
-
-/* دخول غرفة Online */
-$("join").onclick=async()=>{
- if(!onlineReady){
-  msg("Firebase غير متصل. راجع الإعدادات.");
-  return;
- }
-
- const name=$("name").value.trim();
- const code=$("roomCode").value.trim();
-
- if(!name||!code){
-  msg("اكتب الاسم ورمز الغرفة");
-  return;
- }
-
- try{
-  let joined=false;
-
-  const result=await runTransaction(
-   ref(db,"rooms/"+code),
-   current=>{
-    if(!current||!current.players||current.players[1])return;
-
-    current.players[1]={
-     name:name,r:0,c:4
-    };
-    joined=true;
-    return current;
-   }
-  );
-
-  if(!result.committed){
-   msg("الغرفة غير موجودة أو ممتلئة");
-   return;
-  }
-
-  room=code;
-  player=1;
-  enterOnline();
- }catch(e){
-  msg("تعذر الدخول: "+e.message);
- }
-};
-
-function enterOnline(){
- gameMode="online";
- showGame();
-
- $("info").textContent="رمز الغرفة: "+room;
-
- if(unsubscribe)unsubscribe();
-
- unsubscribe=onValue(ref(db,"rooms/"+room),snap=>{
-  state=snap.val();
-
-  if(!state)return;
-
-  players=state.players;
-  walls=state.walls||[];
-  remaining=state.remaining||[10,10];
-  turn=state.turn;
-  finished=state.finished;
-
-  draw();
- });
+function inside(r,c){
+ return r>=0&&r<9&&c>=0&&c<9;
 }
 
-/* الحواجز */
-function edge(a,b){
- return [a.join(","),b.join(",")].sort().join("|");
+function neighbors(p){
+ return [
+  {r:p.r-1,c:p.c},
+  {r:p.r+1,c:p.c},
+  {r:p.r,c:p.c-1},
+  {r:p.r,c:p.c+1}
+ ].filter(n=>inside(n.r,n.c));
 }
 
-function blocked(r,c,nr,nc,list=walls){
- const k=edge([r,c],[nr,nc]);
- return list.some(w=>w.edges.includes(k));
+function blockedBetween(a,b){
+ return blocked.has(key(a,b));
 }
 
-function makeWall(r,c,type,list=walls){
- if(r<0||r>7||c<0||c>7)return null;
-
- const edges=type==="h"?[
-  edge([r,c],[r+1,c]),
-  edge([r,c+1],[r+1,c+1])
- ]:[
-  edge([r,c],[r,c+1]),
-  edge([r+1,c],[r+1,c+1])
- ];
-
- if(list.some(w=>w.edges.some(e=>edges.includes(e))))return null;
-
- if(list.some(w=>w.r===r&&w.c===c&&w.type!==type))return null;
-
- return {r,c,type,edges};
-}
-
-/* التحقق من بقاء طريق للفوز */
-function hasPath(index,list,ps){
- const p=ps[index];
- const goal=index===0?0:8;
- const queue=[[p.r,p.c]];
- const seen=new Set([p.r+","+p.c]);
+function pathExists(start,player){
+ let queue=[start];
+ let seen=new Set([start.r+","+start.c]);
 
  while(queue.length){
-  const [r,c]=queue.shift();
+  let p=queue.shift();
+  if(player===0&&p.r===8)return true;
+  if(player===1&&p.r===0)return true;
 
-  if(r===goal)return true;
-
-  for(const [nr,nc] of [
-   [r+1,c],[r-1,c],[r,c+1],[r,c-1]
-  ]){
-   if(nr<0||nr>8||nc<0||nc>8)continue;
-   if(blocked(r,c,nr,nc,list))continue;
-
-   const k=nr+","+nc;
-
-   if(!seen.has(k)){
+  for(let n of neighbors(p)){
+   let k=n.r+","+n.c;
+   if(!seen.has(k)&&!blockedBetween(p,n)){
     seen.add(k);
-    queue.push([nr,nc]);
+    queue.push(n);
    }
   }
  }
-
  return false;
 }
 
-/* الحركة ووضع الحواجز */
-async function action(r,c){
- if(finished)return;
+function wallEdges(r,c,type){
+ let a={r,c};
+ let b={r:r+1,c};
+ let d={r:r+1,c:c+1};
+ let e={r,c:c+1};
+ return type==="h"?
+ [key(a,b),key(e,d)]:
+ [key(a,e),key(b,d)];
+}
 
- if(gameMode==="online"){
-  if(turn!==player)return;
+function validWall(r,c,type){
+ if(r<0||r>7||c<0||c>7)return false;
 
-  await runTransaction(ref(db,"rooms/"+room),current=>{
-   if(!current||current.finished||current.turn!==player)return;
+ if(placed.some(w=>w.r===r&&w.c===c))return false;
 
-   const ps=current.players;
-   const list=current.walls||[];
-   const p=ps[player];
+ let edges=wallEdges(r,c,type);
+ if(edges.some(e=>blocked.has(e)))return false;
 
-   if(mode==="move"){
-    if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
-    if(ps.some((x,i)=>i!==player&&x&&x.r===r&&x.c===c))return;
-    if(blocked(p.r,p.c,r,c,list))return;
+ edges.forEach(e=>blocked.add(e));
+ let valid=pathExists(positions[0],0)&&pathExists(positions[1],1);
+ edges.forEach(e=>blocked.delete(e));
 
-    p.r=r;p.c=c;
+ return valid;
+}
 
-    if(r===(player===0?0:8)){
-     current.finished=true;
-     current.winner=player;
-    }
-   }else{
-    if(current.remaining[player]<=0)return;
-
-    const w=makeWall(r,c,mode,list);
-    if(!w)return;
-
-    const next=[...list,w];
-
-    if(!hasPath(0,next,ps)||!hasPath(1,next,ps))return;
-
-    current.walls=next;
-    current.remaining[player]--;
-   }
-
-   current.turn=1-player;
-   return current;
-  });
-
+function placeWall(r,c,type){
+ if(walls[turn]<=0){
+  $("message").textContent="ما بقاوش عندك الحواجز!";
+  return;
+ }
+ if(!validWall(r,c,type)){
+  $("message").textContent="الحاجز غير صالح أو غادي يسد الطريق!";
   return;
  }
 
- localAction(r,c);
+ let edges=wallEdges(r,c,type);
+ edges.forEach(e=>blocked.add(e));
+ placed.push({r,c,type});
+ walls[turn]--;
+ endTurn();
 }
 
-function localAction(r,c){
- const p=players[turn];
+function movePlayer(r,c){
+ let p=positions[turn];
+ let other=positions[1-turn];
+ let target={r,c};
 
- if(mode==="move"){
-  if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
+ if(!inside(r,c))return;
 
-  if(players.some((x,i)=>i!==turn&&x.r===r&&x.c===c))return;
-  if(blocked(p.r,p.c,r,c))return;
-
-  p.r=r;p.c=c;
-
-  if(r===(turn===0?0:8)){
-   finished=true;
-   draw();
-   $("status").textContent="🏆 الفائز: "+p.name;
-   return;
-  }
- }else{
-  if(remaining[turn]<=0)return;
-
-  const w=makeWall(r,c,mode);
-  if(!w){
-   msg("لا يمكن وضع الحاجز هنا");
-   return;
-  }
-
-  walls.push(w);
-
-  if(!hasPath(0,walls,players)||!hasPath(1,walls,players)){
-   walls.pop();
-   msg("يجب ترك طريق للاعبين");
-   return;
-  }
-
-  remaining[turn]--;
+ let dr=r-p.r,dc=c-p.c;
+ if(Math.abs(dr)+Math.abs(dc)!==1){
+  $("message").textContent="اختار خانة مجاورة!";
+  return;
  }
 
+ if(blockedBetween(p,target)){
+  $("message").textContent="كاين حاجز فهاد الطريق!";
+  return;
+ }
+
+ if(r===other.r&&c===other.c){
+  let jump={r:r+dr,c:c+dc};
+
+  if(inside(jump.r,jump.c)&&!blockedBetween(other,jump)){
+   target=jump;
+  }else{
+   let options=neighbors(other).filter(n=>
+    !(n.r===p.r&&n.c===p.c)&&
+    !blockedBetween(other,n)&&
+    Math.abs(n.r-p.r)+Math.abs(n.c-p.c)===1
+   );
+   if(!options.some(n=>n.r===r&&n.c===c)){
+    $("message").textContent="الحركة غير صالحة!";
+    return;
+   }
+  }
+ }
+
+ positions[turn]=target;
+
+ if((turn===0&&target.r===8)||(turn===1&&target.r===0)){
+  finish(turn);
+  return;
+ }
+ endTurn();
+}
+
+function finish(winner){
+ gameOver=true;
+ stats.wins[winner]++;
+ stats.rounds++;
+
+ let winnerName=winner===0?"اللاعب الأزرق 🔵":
+ (mode==="ai"?"الكمبيوتر 🤖":"اللاعب الأحمر 🔴");
+
+ stats.history.unshift("الجولة "+stats.rounds+" - فاز "+winnerName);
+ stats.history=stats.history.slice(0,30);
+ save();
+
+ $("message").textContent="🏆 مبروك! "+winnerName+" ربح!";
+ $("turn").textContent="انتهت الجولة!";
+ render();
+}
+
+function endTurn(){
  turn=1-turn;
- mode="move";
- draw();
+ selected="move";
+ setTools();
+ render();
 
- if(gameMode==="robot"&&turn===1&&!finished){
-  setTimeout(robotMove,500);
+ if(mode==="ai"&&turn===1&&!gameOver){
+  setTimeout(aiMove,500);
  }
 }
 
-/* الكمبيوتر */
-function robotMove(){
- if(finished)return;
+function aiMove(){
+ if(gameOver||mode!=="ai"||turn!==1)return;
 
- const p=players[1];
- const options=[
-  [p.r+1,p.c],[p.r-1,p.c],
-  [p.r,p.c+1],[p.r,p.c-1]
- ];
+ let p=positions[1];
+ let other=positions[0];
+ let options=neighbors(p).filter(n=>!blockedBetween(p,n));
 
- let best=null;
- let distance=Infinity;
-
- for(const [r,c] of options){
-  if(r<0||r>8||c<0||c>8)continue;
-  if(blocked(p.r,p.c,r,c))continue;
-  if(players[0].r===r&&players[0].c===c)continue;
-
-  const oldR=p.r,oldC=p.c;
-  p.r=r;p.c=c;
-
-  const d=shortestPath(1);
-
-  p.r=oldR;p.c=oldC;
-
-  if(d<distance){
-   distance=d;
-   best=[r,c];
-  }
- }
-
- if(!best){
-  turn=0;
-  draw();
-  return;
- }
-
- p.r=best[0];p.c=best[1];
-
- if(p.r===8){
-  finished=true;
-  draw();
-  $("status").textContent="🏆 الكمبيوتر فاز!";
-  return;
- }
-
- turn=0;
- draw();
-}
-
-function shortestPath(index){
- const p=players[index];
- const goal=index===0?0:8;
- const queue=[[p.r,p.c,0]];
- const seen=new Set([p.r+","+p.c]);
-
- while(queue.length){
-  const [r,c,d]=queue.shift();
-  if(r===goal)return d;
-
-  for(const [nr,nc] of [
-   [r+1,c],[r-1,c],[r,c+1],[r,c-1]
-  ]){
-   if(nr<0||nr>8||nc<0||nc>8)continue;
-   if(blocked(r,c,nr,nc))continue;
-
-   const k=nr+","+nc;
-   if(!seen.has(k)){
-    seen.add(k);
-    queue.push([nr,nc,d+1]);
+ // القفز فوق اللاعب الآخر
+ let moves=[];
+ for(let n of options){
+  if(n.r===other.r&&n.c===other.c){
+   let jump={r:n.r+(n.r-p.r),c:n.c+(n.c-p.c)};
+   if(inside(jump.r,jump.c)&&!blockedBetween(n,jump)){
+    moves.push(jump);
+   }else{
+    neighbors(n).forEach(side=>{
+     if(!(side.r===p.r&&side.c===p.c)&&
+        !blockedBetween(n,side)&&
+        Math.abs(side.r-p.r)+Math.abs(side.c-p.c)===1){
+      moves.push(side);
+     }
+    });
    }
+  }else{
+   moves.push(n);
   }
  }
 
- return 99;
+ if(!moves.length)return;
+
+ moves.sort((a,b)=>a.r-b.r);
+ let best=moves[0];
+ positions[1]=best;
+
+ if(best.r===0){
+  finish(1);
+  return;
+ }
+ endTurn();
 }
 
-/* رسم اللعبة */
-function draw(){
- const board=$("board");
- board.innerHTML="";
+function render(){
+ $("board").innerHTML="";
 
  for(let r=0;r<9;r++){
   for(let c=0;c<9;c++){
-   const cell=document.createElement("div");
+   let cell=document.createElement("button");
    cell.className="cell";
 
-   players.forEach((p,i)=>{
-    if(p&&p.r===r&&p.c===c){
-     cell.classList.add(i===0?"blue":"red");
-    }
+   if(positions[0].r===r&&positions[0].c===c)
+    cell.classList.add("blue");
+   if(positions[1].r===r&&positions[1].c===c)
+    cell.classList.add("red");
+
+   // إظهار الحواجز
+   if(placed.some(w=>w.type==="h"&&w.r===r&&(w.c===c||w.c+1===c)))
+    cell.classList.add("wh");
+
+   if(placed.some(w=>w.type==="v"&&w.c===c&&(w.r===r||w.r+1===r)))
+    cell.classList.add("wv");
+
+   cell.addEventListener("click",()=>{
+    if(gameOver)return;
+    if(mode==="ai"&&turn===1)return;
+
+    if(selected==="move")movePlayer(r,c);
+    else placeWall(r,c,selected);
    });
 
-   cell.onclick=()=>action(r,c);
-   board.appendChild(cell);
+   $("board").appendChild(cell);
   }
  }
 
- walls.forEach(w=>{
-  const el=document.createElement("div");
-  el.className="wall";
+ $("turn").textContent=turn===0?
+ "دور اللاعب الأزرق 🔵":
+ (mode==="ai"?"دور الكمبيوتر 🤖":"دور اللاعب الأحمر 🔴");
 
-  if(w.type==="h"){
-   el.style.left=(w.c*100/9)+"%";
-   el.style.top=((w.r+1)*100/9-1)+"%";
-   el.style.width=(200/9)+"%";
-   el.style.height="3%";
-  }else{
-   el.style.left=((w.c+1)*100/9-1)+"%";
-   el.style.top=(w.r*100/9)+"%";
-   el.style.width="3%";
-   el.style.height=(200/9)+"%";
-  }
-
-  board.appendChild(el);
- });
-
- if(finished){
-  $("status").textContent="🏆 انتهت اللعبة!";
- }else{
-  $("status").textContent=
-   "دور: "+(players[turn]?.name||"في انتظار اللاعب");
- }
-
- $("info").textContent=
-  "حواجز الأزرق: "+remaining[0]+
-  " | حواجز الأحمر: "+remaining[1];
+ $("walls0").textContent=walls[0];
+ $("walls1").textContent=walls[1];
 }
 
-/* أزرار التحكم */
-$("move").onclick=()=>{mode="move";};
-$("horizontal").onclick=()=>{mode="h";};
-$("vertical").onclick=()=>{mode="v";};
+function setTools(){
+ ["moveBtn","hBtn","vBtn"].forEach(id=>$(id).classList.remove("active"));
+ $(selected==="move"?"moveBtn":selected==="h"?"hBtn":"vBtn").classList.add("active");
+}
 
-$("restart").onclick=()=>{
- if(gameMode==="online"){
-  msg("إعادة اللعب عبر الإنترنت تحتاج إعادة إنشاء الغرفة.");
- }else{
-  startLocal();
+$("moveBtn").onclick=()=>{
+ selected="move";setTools();
+ $("message").textContent="اختار خانة مجاورة للتحرك.";
+};
+
+$("hBtn").onclick=()=>{
+ selected="h";setTools();
+ $("message").textContent="اختار مكان الحاجز الأفقي.";
+};
+
+$("vBtn").onclick=()=>{
+ selected="v";setTools();
+ $("message").textContent="اختار مكان الحاجز العمودي.";
+};
+
+function newRound(){
+ positions=[{r:0,c:4},{r:8,c:4}];
+ walls=[10,10];
+ blocked.clear();
+ placed=[];
+ turn=0;
+ gameOver=false;
+ selected="move";
+ setTools();
+ $("message").textContent="جولة جديدة! بالتوفيق.";
+ updateStats();
+ render();
+}
+
+$("newBtn").onclick=newRound;
+
+$("localBtn").onclick=()=>{
+ mode="local";
+ $("redName").textContent="اللاعب الأحمر";
+ $("modeText").textContent="النمط: لاعبان على نفس الجهاز";
+ newRound();
+};
+
+$("aiBtn").onclick=()=>{
+ mode="ai";
+ $("redName").textContent="الكمبيوتر";
+ $("modeText").textContent="النمط: ضد الكمبيوتر";
+ newRound();
+};
+
+$("clearBtn").onclick=()=>{
+ if(confirm("واش متأكد بغيتي تمسح النتائج؟")){
+  stats={wins:[0,0],rounds:0,history:[]};
+  save();
  }
 };
 
-$("home").onclick=showMenu;
+// الموسيقى: خاص الملف 5-star.mp3 يكون بجانب index.html
+let musicOn=false;
+$("musicBtn").onclick=async()=>{
+ const song=$("song");
 
+ if(!musicOn){
+  try{
+   await song.play();
+   musicOn=true;
+   $("musicBtn").textContent="⏸ إيقاف الموسيقى";
+  }catch(e){
+   $("message").textContent="تأكد أن ملف 5-star.mp3 موجود بجانب اللعبة.";
+  }
+ }else{
+  song.pause();
+  musicOn=false;
+  $("musicBtn").textContent="🎵 تشغيل الموسيقى";
+ }
+};
+
+$("song").addEventListener("ended",()=>{
+ musicOn=false;
+ $("musicBtn").textContent="🎵 تشغيل الموسيقى";
+});
+
+updateStats();
+render();
 </script>
 </body>
 </html>
+```
