@@ -1,115 +1,119 @@
-
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Mohamed Photo 20106</title>
 
 <style>
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
+
 body {
-  margin: 0;
-  background: #050505;
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
+    margin: 0;
+    background: #050505;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
 }
+
 .screen {
-  display: none;
-  min-height: 100vh;
-  padding: 35px 18px;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  animation: fade 1s;
+    display: none;
+    min-height: 100vh;
+    padding: 30px 18px;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
 }
+
 .screen.active {
-  display: flex;
+    display: flex;
+    animation: fade 0.8s ease;
 }
+
 img {
-  max-width: 95%;
-  max-height: 65vh;
-  border-radius: 18px;
-  object-fit: cover;
-  box-shadow: 0 0 25px #168cff;
+    width: 90%;
+    max-width: 500px;
+    max-height: 60vh;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0 0 25px #168cff;
 }
+
 h1 {
-  color: #42a5ff;
-  text-shadow: 0 0 15px #168cff;
+    color: #42a5ff;
+    text-shadow: 0 0 15px #168cff;
 }
+
 p {
-  font-size: 18px;
+    font-size: 18px;
 }
+
 button {
-  margin-top: 25px;
-  padding: 15px 30px;
-  border: none;
-  border-radius: 30px;
-  background: #168cff;
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
+    margin: 12px;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 30px;
+    background: #168cff;
+    color: white;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
 }
+
 button:hover {
-  background: #005bb5;
+    background: #005bb5;
 }
+
 @keyframes fade {
-  from {opacity: 0; transform: translateY(15px);}
-  to {opacity: 1; transform: translateY(0);}
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>
 </head>
 
 <body>
 
+<!-- FIRST PAGE -->
 <div class="screen active" id="one">
-  <h1>WELCOME TO MY WORLD</h1>
-  <img src="image1.jpg" alt="Welcome">
-  <p>Are you ready?</p>
-  <button onclick="next('two')">CONTINUE</button>
+
+    <h1>WELCOME TO MY WORLD</h1>
+
+    <img src="image1.jpg" alt="Welcome">
+
+    <p>Are you ready?</p>
+
+    <button onclick="next('two')">
+        CONTINUE
+    </button>
+
 </div>
 
+<!-- SECOND PAGE -->
 <div class="screen" id="two">
-  <h1>MOHAMED BOULJIHAL</h1>
-  <img src="moi.jpg" alt="Mohamed">
-  <h2>🎵 5 STAR</h2>
-  <p>STORMY</p>
-  <button onclick="playMusic()">▶ PLAY MUSIC</button>
-  <button onclick="next('three')">NEXT</button>
-  <audio id="music" src="5-star.m4a" loop></audio>
-</div>
 
-<div class="screen" id="three">
-  <h1>SALÉ 🇲🇦</h1>
-  <img src="sale.jpg" alt="Casablanca">
-  <p>Welcome to sale</p>
-  <button onclick="next('four')">START THE GAME</button>
-</div>
+    <h1>MOHAMED BOULJIHAL</h1>
 
-<div class="screen" id="four">
-  <h1>🔥 LET'S PLAY 🔥</h1>
-  <p>MOHAMED PHOTO 20106</p>
-  <button onclick="location.href='mohamed_photo2010_game.html'">
-    START GAME 🚀
-  </button>
-</div>
+    <img src="moi.jpg" alt="Mohamed">
 
-<script>
-function next(id) {
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-  });
-  document.getElementById(id).classList.add('active');
-}
+    <h2>🎵 5 STAR</h2>
 
-function playMusic() {
-  document.getElementById('music').play();
-}
-</script>
+    <p>STORMY</p>
 
-</body>
-</html>
+    <button onclick="playMusic()">
+        ▶ PLAY MUSIC
+    </button>
+
+    <button onclick="next('three')">
+        NEXT
+    </button>
+
+    <audio id="music" src="5-star.m4a" loop></audio
