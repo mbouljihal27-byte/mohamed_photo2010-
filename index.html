@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,144 +8,83 @@
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#080d18;color:white;
- font-family:Arial;text-align:center;padding:20px
+ margin:0;background:#080b16;color:white;
+ font-family:Arial;text-align:center;
 }
-h1{color:#40e7ff;letter-spacing:5px}
-#status{color:#ffd166;margin:15px}
-#board{
+h1{color:#00eaff;text-shadow:0 0 15px #00eaff}
+button,input{
+ padding:13px;margin:7px;border:0;
+ border-radius:9px;font-weight:bold;
+}
+button{background:#00eaff;cursor:pointer}
+input{background:#202b40;color:white}
+.hidden{display:none}
+.menu{margin-top:100px}
+.board{
  display:grid;grid-template-columns:repeat(9,1fr);
- gap:4px;width:min(92vw,480px);margin:auto;
+ gap:4px;width:min(90vw,450px);margin:20px auto;
 }
 .cell{
- aspect-ratio:1;background:#1a2940;
- border:1px solid #344b68;border-radius:5px;
- position:relative;cursor:pointer
+ aspect-ratio:1;background:#17243a;
+ border-radius:5px;cursor:pointer;
+ position:relative;
 }
-.blue,.pink{
- position:absolute;inset:18%;border-radius:50%;
-}
-.blue{background:#40e7ff;box-shadow:0 0 12px #40e7ff}
-.pink{background:#ff5ca8;box-shadow:0 0 12px #ff5ca8}
-.wall{background:#ffd166!important}
-button{
- padding:12px 20px;margin:7px;border:0;
- border-radius:9px;font-weight:bold;cursor:pointer
-}
+.blue{background:#00d9ff!important;border-radius:50%}
+.red{background:#ff287b!important;border-radius:50%}
+.wall{background:#ffe600!important}
+#status{color:#ffe600;margin:15px}
 </style>
 </head>
 <body>
 
+<div id="login" class="menu">
+<h1>⚡ NEON BLOCK ⚡</h1>
+<h2>WELCOME PLAYER</h2>
+<input id="username" placeholder="Enter your name">
+<br>
+<button onclick="login()">JOIN GAME</button>
+</div>
+
+<div id="home" class="hidden menu">
 <h1>NEON BLOCK</h1>
-<p id="status">BLUE PLAYER STARTS</p>
+<h3 id="welcome"></h3>
+<button onclick="start('offline')">📴 OFFLINE</button>
+<button onclick="start('robot')">🤖 VS ROBOT</button>
+<button onclick="start('online')">🌐 ONLINE</button>
+</div>
 
-<div id="board"></div>
-
-<p>
+<div id="game" class="hidden">
+<h1>⚡ NEON BLOCK ⚡</h1>
+<div id="status"></div>
 <button onclick="mode='move'">MOVE</button>
-<button onclick="mode='wall'">WALL</button>
-<button onclick="reset()">NEW GAME</button>
-</p>
+<button onclick="mode='horizontal'">H WALL</button>
+<button onclick="mode='vertical'">V WALL</button>
+<div class="board" id="board"></div>
+<button onclick="resetGame()">NEW GAME</button>
+<button onclick="goHome()">HOME</button>
+</div>
 
 <script>
-const N=9;
-let players=[{r:0,c:4},{r:8,c:4}];
-let walls=[];
+let name="";
+let gameMode="";
+let mode="move";
 let turn=0;
-let mode='move';
-let gameOver=false;
+let finished=false;
+let walls=[];
+let players=[];
 
-const board=document.getElementById("board");
-
-function blocked(r,c,nr,nc){
- return walls.some(w=>{
-  if(w.o==="h")
-   return (r===w.r&&nr===w.r&&Math.min(c,nc)===w.c)
-       ||(r===w.r+1&&nr===w.r+1&&Math.min(c,nc)===w.c);
-  return (c===w.c&&nc===w.c&&Math.min(r,nr)===w.r)
-      ||(c===w.c+1&&nc===w.c+1&&Math.min(r,nr)===w.r);
- });
+function login(){
+ name=document.getElementById("username").value.trim();
+ if(!name){alert("Enter your name!");return}
+ localStorage.setItem("neonPlayer",name);
+ document.getElementById("login").classList.add("hidden");
+ document.getElementById("home").classList.remove("hidden");
+ document.getElementById("welcome").textContent="Welcome "+name;
 }
 
-function render(){
- board.innerHTML="";
-
- for(let r=0;r<N;r++){
-  for(let c=0;c<N;c++){
-   let cell=document.createElement("div");
-   cell.className="cell";
-
-   players.forEach((p,i)=>{
-    if(p.r===r&&p.c===c){
-     let dot=document.createElement("div");
-     dot.className=i===0?"blue":"pink";
-     cell.appendChild(dot);
-    }
-   });
-
-   if(walls.some(w=>w.r===r&&w.c===c)){
-    cell.classList.add("wall");
-   }
-
-   cell.onclick=()=>play(r,c);
-   board.appendChild(cell);
-  }
- }
-
- document.getElementById("status").textContent=
- gameOver?"🏆 GAME OVER":
- (turn===0?"🔵 BLUE PLAYER":"🔴 PINK PLAYER")+
- " — "+mode.toUpperCase();
-}
-
-function play(r,c){
- if(gameOver)return;
-
- let p=players[turn];
-
- if(mode==="move"){
-  let distance=Math.abs(p.r-r)+Math.abs(p.c-c);
-
-  if(distance!==1)return;
-  if(players.some((x,i)=>i!==turn&&x.r===r&&x.c===c))return;
-  if(blocked(p.r,p.c,r,c))return;
-
-  p.r=r;p.c=c;
-
-  if((turn===0&&r===8)||(turn===1&&r===0)){
-   gameOver=true;
-   render();
-   document.getElementById("status").textContent=
-    "🏆 "+(turn===0?"BLUE":"PINK")+" WINS!";
-   return;
-  }
-
-  turn=1-turn;
- }
-
- else{
-  if(r>7||c>7)return;
-  if(walls.some(w=>w.r===r&&w.c===c))return;
-
-  walls.push({r,c,o:"h"});
-  turn=1-turn;
-  mode="move";
- }
-
- render();
-}
-
-function reset(){
- players=[{r:0,c:4},{r:8,c:4}];
- walls=[];
- turn=0;
- mode="move";
- gameOver=false;
- render();
-}
-
-render();
-</script>
-
+function start(m){
+ gameMode=m;
+ document.getElementById("home").classList.add("hidden");
+ document.getElementById("game").classList.remove("hidden
 </body>
 </html>
