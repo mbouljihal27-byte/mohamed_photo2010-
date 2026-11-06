@@ -1,110 +1,296 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mohamed Photo 20106</title>
-
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: black;
-  color: white;
-  text-align: center;
-}
-
-.screen {
-  display: none;
-  min-height: 100vh;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-}
-
-.screen.active {
-  display: flex;
-}
-
-h1 {
-  font-size: 35px;
-}
-
-button {
-  padding: 15px 35px;
-  border: none;
-  border-radius: 30px;
-  background: white;
-  color: black;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 20px;
-}
-
-button:hover {
-  background: gold;
-}
-
-img {
-  max-width: 85%;
-  max-height: 350px;
-  border-radius: 20px;
-  margin: 15px;
-}
+body{margin:0;background:#080b12;color:white;font-family:Arial;text-align:center}
+h1{color:gold}
+button,select{padding:13px;margin:7px;border:0;border-radius:9px;font-weight:bold;font-size:16px}
+button{background:gold;cursor:pointer}
+select{background:#222;color:white}
+#game{display:none}
+canvas{width:95%;max-width:800px;border:3px solid gold;background:#315b3c}
+#info{color:gold;font-size:20px;padding:10px}
+.controls button{width:65px}
 </style>
 </head>
-
 <body>
 
-<div class="screen active" id="one">
-  <h1>WELCOME TO MY WORLD</h1>
-  <h2>Welcome</h2>
-  <p>Are you ready?</p>
-  <button onclick="next('two')">CONTINUE</button>
+<div id="menu">
+<h1>MOHAMED PHOTO 20106</h1>
+<h2>CHOOSE YOUR DIFFICULTY</h2>
+<select id="difficulty">
+<option value="0">EASY 🟢</option>
+<option value="1">NORMAL 🟡</option>
+<option value="2">HARD 🟠</option>
+<option value="3">EXTREME 🔴</option>
+<option value="4">IMPOSSIBLE ⚫</option>
+</select>
+<br>
+<button onclick="start()">START GAME</button>
 </div>
 
-<div class="screen" id="two">
-  <h1>MOHAMED BOULJIHAL</h1>
-  <img src="moi.jpg" alt="Mohamed">
-  <audio id="music" src="5-star.m4a"></audio>
-  <button onclick="playMusic()">PLAY MUSIC</button>
-  <button onclick="next('three')">NEXT</button>
+<div id="game">
+<h2>MY WORLD</h2>
+<div id="info"></div>
+<canvas id="c" width="800" height="500"></canvas>
+<div class="controls">
+<div><button onclick="move(0,-1)">⬆️</button></div>
+<div>
+<button onclick="move(-1,0)">⬅️</button>
+<button onclick="move(0,1)">⬇️</button>
+<button onclick="move(1,0)">➡️</button>
 </div>
-
-<div class="screen" id="three">
-  <h1>SALE 🇲🇦</h1>
-  <img src="sale.jpg" alt="Sale">
-  <button onclick="next('four')">NEXT</button>
 </div>
-
-<div class="screen" id="four">
-  <h1>LET'S PLAY</h1>
-  <button onclick="startGame()">START</button>
+<button onclick="restart()">RESTART</button>
+<button onclick="back()">MENU</button>
 </div>
 
 <script>
-window.next = function(id) {
-  document.querySelectorAll('.screen').forEach(function(screen) {
-    screen.classList.remove('active');
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
+const T=40,W=20,H=12;
+
+let player,exit,enemies,walls;
+let level=1,score=0,running=false;
+let difficulty=0;
+let enemySpeed=900;
+let enemyTimer;
+
+const maps=[
+[
+"####################",
+"#S...#.............#",
+"###..#.######.###..#",
+"#....#......#...#..#",
+"#.######.##.###.#..#",
+"#......#..#.....#..#",
+"####.#.#..#####.#..#",
+"#....#.#......#....#",
+"#.####.#####.####..#",
+"#......#.....#.....#",
+"#.................E#",
+"####################"
+],
+[
+"####################",
+"#S....#............#",
+"#.##..#.##########.#",
+"#....##......#.....#",
+"######.####..#.###.#",
+"#......#.....#...#.#",
+"#.######.#######.#.#",
+"#........#.......#.#",
+"########.#.#######.#",
+"#........#.........#",
+"#.###############.E#",
+"####################"
+],
+[
+"####################",
+"#S........#........#",
+"#########.#.######.#",
+"#.........#......#.#",
+"#.##############.#.#",
+"#...............#.#",
+"#.###############.#",
+"#.................#",
+"####.##############",
+"#....#............#",
+"#.####.##########.E#",
+"####################"
+],
+[
+"####################",
+"#S....#............#",
+"###.#.#.##########.#",
+"#...#.#........#...#",
+"#.###.########.#.###",
+"#.....#........#...#",
+"#####.#.##########.#",
+"#.....#............#",
+"#.###############..#",
+"#.................##",
+"#.###############.E#",
+"####################"
+],
+[
+"####################",
+"#S.................#",
+"#.################.#",
+"#...............#..#",
+"###############.#.##",
+"#...............#..#",
+"#.################.#",
+"#..................#",
+"##################.#",
+"#..................#",
+"#.################E#",
+"####################"
+]
+];
+
+function start(){
+ difficulty=Number(document.getElementById("difficulty").value);
+ document.getElementById("menu").style.display="none";
+ document.getElementById("game").style.display="block";
+ level=1;
+ running=true;
+ enemySpeed=Math.max(180,900-difficulty*150);
+ loadLevel();
+ startEnemies();
+}
+
+function loadLevel(){
+ player={x:1,y:1};
+ walls=[];
+ enemies=[];
+ score=0;
+
+ maps[level-1].forEach((row,y)=>{
+  [...row].forEach((v,x)=>{
+   if(v==="#")walls.push({x,y});
+   if(v==="E")exit={x,y};
+  });
+ });
+
+ let count=2+difficulty*2+level;
+ for(let i=0;i<count;i++){
+  let x=5+(i*3)%10;
+  let y=2+(i*2)%7;
+  if(!blocked(x,y))enemies.push({x,y,dir:1});
+ }
+
+ draw();
+ updateInfo();
+}
+
+function blocked(x,y){
+ return walls.some(w=>w.x===x&&w.y===y);
+}
+
+function updateInfo(){
+ let names=["EASY","NORMAL","HARD","EXTREME","IMPOSSIBLE"];
+ document.getElementById("info").textContent=
+ names[difficulty]+" | LEVEL "+level+"/5";
+}
+
+function move(dx,dy){
+ if(!running)return;
+ let x=player.x+dx,y=player.y+dy;
+ if(x<0||y<0||x>=W||y>=H||blocked(x,y))return;
+
+ player.x=x;
+ player.y=y;
+
+ if(enemies.some(e=>e.x===x&&e.y===y)){
+  gameOver();
+  return;
+ }
+
+ if(x===exit.x&&y===exit.y){
+  if(level===5){
+   running=false;
+   clearInterval(enemyTimer);
+   alert("🏆 YOU WON!");
+   back();
+  }else{
+   level++;
+   alert("LEVEL "+level+"!");
+   loadLevel();
+  }
+  return;
+ }
+ draw();
+}
+
+function draw(){
+ ctx.clearRect(0,0,800,500);
+ ctx.fillStyle="#315b3c";
+ ctx.fillRect(0,0,800,500);
+
+ walls.forEach(w=>{
+  ctx.fillStyle="#242c39";
+  ctx.fillRect(w.x*T,w.y*T,T,T);
+  ctx.strokeStyle="#566477";
+  ctx.strokeRect(w.x*T,w.y*T,T,T);
+ });
+
+ ctx.fillStyle="gold";
+ ctx.fillRect(exit.x*T+5,exit.y*T+5,30,30);
+ ctx.fillStyle="black";
+ ctx.font="20px Arial";
+ ctx.fillText("E",exit.x*T+13,exit.y*T+27);
+
+ enemies.forEach(e=>{
+  ctx.fillStyle="red";
+  ctx.beginPath();
+  ctx.arc(e.x*T+20,e.y*T+20,14,0,Math.PI*2);
+  ctx.fill();
+ });
+
+ ctx.fillStyle="#00d9ff";
+ ctx.beginPath();
+ ctx.arc(player.x*T+20,player.y*T+20,15,0,Math.PI*2);
+ ctx.fill();
+}
+
+function startEnemies(){
+ clearInterval(enemyTimer);
+ enemyTimer=setInterval(()=>{
+  if(!running)return;
+
+  enemies.forEach(e=>{
+   let nx=e.x+e.dir;
+   if(blocked(nx,e.y)||nx>=19||nx<=1)e.dir*=-1;
+   else e.x=nx;
   });
 
-  document.getElementById(id).classList.add('active');
-};
+  if(enemies.some(e=>e.x===player.x&&e.y===player.y)){
+   gameOver();
+   return;
+  }
+  draw();
+ },enemySpeed);
+}
 
-window.playMusic = function() {
-  document.getElementById('music').play();
-};
+function gameOver(){
+ running=false;
+ clearInterval(enemyTimer);
+ alert("GAME OVER! TRY AGAIN");
+}
 
-window.startGame = function() {
-  alert("Welcome to Mohamed Photo 20106!");
-};
+function restart(){
+ clearInterval(enemyTimer);
+ running=true;
+ level=1;
+ loadLevel();
+ startEnemies();
+}
+
+function back(){
+ running=false;
+ clearInterval(enemyTimer);
+ document.getElementById("game").style.display="none";
+ document.getElementById("menu").style.display="block";
+}
+
+window.addEventListener("keydown",e=>{
+ const d={
+ ArrowUp:[0,-1],ArrowDown:[0,1],
+ ArrowLeft:[-1,0],ArrowRight:[1,0],
+ w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]
+ };
+ if(d[e.key]){
+  e.preventDefault();
+  move(...d[e.key]);
+ }
+});
 </script>
-
 </body>
+</html>
+```
 </html>
