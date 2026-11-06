@@ -3,56 +3,74 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NEON BLOCK</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#080b16;color:white;font-family:Arial;text-align:center}
+body{
+ margin:0;background:#080b16;color:white;
+ font-family:Arial;text-align:center;
+}
 h1{color:#00eaff;text-shadow:0 0 15px #00eaff}
-button,input{padding:13px;margin:7px;border:0;border-radius:9px;font-weight:bold}
+button,input{
+ padding:13px;margin:6px;border:0;
+ border-radius:9px;font-weight:bold;
+}
 button{background:#00eaff;cursor:pointer}
+button:hover{background:white}
 input{background:#202b40;color:white}
-.hidden{display:none}
-.menu{margin-top:100px}
-.board{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;width:min(90vw,450px);margin:20px auto}
-.cell{aspect-ratio:1;background:#17243a;border-radius:5px;cursor:pointer}
+.page{padding-top:60px}
+.hidden{display:none!important}
+.board{
+ display:grid;grid-template-columns:repeat(9,1fr);
+ gap:4px;width:min(92vw,450px);margin:20px auto;
+}
+.cell{
+ aspect-ratio:1;background:#17243a;
+ border:1px solid #263958;border-radius:5px;
+ cursor:pointer;
+}
 .blue{background:#00d9ff!important;border-radius:50%}
 .red{background:#ff287b!important;border-radius:50%}
 .wall{background:#ffe600!important}
-#status{color:#ffe600;margin:15px}
+#status{color:#ffe600;font-size:18px}
 </style>
 </head>
 <body>
 
-<div id="login" class="menu">
+<section id="login" class="page">
 <h1>⚡ NEON BLOCK ⚡</h1>
 <h2>WELCOME PLAYER</h2>
 <input id="username" placeholder="Enter your name">
 <br>
-<button type="button" onclick="login()">JOIN GAME</button>
-</div>
+<button id="join">JOIN GAME</button>
+</section>
 
-<div id="home" class="hidden menu">
+<section id="home" class="page hidden">
 <h1>NEON BLOCK</h1>
-<h3 id="welcome"></h3>
-<button onclick="start('offline')">📴 OFFLINE</button>
-<button onclick="start('robot')">🤖 VS ROBOT</button>
-<button onclick="start('online')">🌐 ONLINE</button>
-</div>
+<h2 id="welcome"></h2>
+<button id="offline">📴 OFFLINE</button>
+<button id="robot">🤖 VS ROBOT</button>
+<button id="online">🌐 ONLINE</button>
+</section>
 
-<div id="game" class="hidden">
+<section id="game" class="hidden">
 <h1>⚡ NEON BLOCK ⚡</h1>
 <div id="status"></div>
-<button onclick="mode='move'">MOVE</button>
-<button onclick="mode='horizontal'">H WALL</button>
-<button onclick="mode='vertical'">V WALL</button>
-<div class="board" id="board"></div>
-<button onclick="resetGame()">NEW GAME</button>
-<button onclick="goHome()">HOME</button>
+<div>
+<button id="move">MOVE</button>
+<button id="horizontal">H WALL</button>
+<button id="vertical">V WALL</button>
 </div>
+<div class="board" id="board"></div>
+<button id="restart">NEW GAME</button>
+<button id="homeBtn">HOME</button>
+</section>
 
 <script>
-let name="";
+const $=id=>document.getElementById(id);
+
+let username="";
 let gameMode="";
 let mode="move";
 let turn=0;
@@ -60,87 +78,119 @@ let finished=false;
 let walls=[];
 let players=[];
 
-function login(){
-    let input=document.getElementById("username");
-    name=input.value.trim();
-
-    if(name===""){
-        alert("Please enter your name!");
-        return;
-    }
-
-    localStorage.setItem("neonPlayer",name);
-
-    document.getElementById("login").style.display="none";
-    document.getElementById("home").style.display="block";
-
-    document.getElementById("welcome").innerText="Welcome "+name+"!";
+function show(page){
+ ["login","home","game"].forEach(id=>$(id).classList.add("hidden"));
+ $(page).classList.remove("hidden");
 }
 
-function start(m){
- gameMode=m;
- document.getElementById("home").classList.add("hidden");
- document.getElementById("game").classList.remove("hidden");
+$("join").addEventListener("click",()=>{
+ let value=$("username").value.trim();
+
+ if(!value){
+  alert("PLEASE ENTER YOUR NAME");
+  return;
+ }
+
+ username=value;
+ localStorage.setItem("neonPlayer",username);
+ $("welcome").textContent="WELCOME "+username+"!";
+ show("home");
+});
+
+function start(type){
+ gameMode=type;
+ show("game");
  resetGame();
 
- if(m==="online"){
-  alert("Online mode needs a server connection.");
+ if(type==="online"){
+  alert("ONLINE MODE IS NOT CONNECTED YET. THIS IS A LOCAL DEMO.");
  }
 }
+
+$("offline").onclick=()=>start("offline");
+$("robot").onclick=()=>start("robot");
+$("online").onclick=()=>start("online");
+
+$("move").onclick=()=>mode="move";
+$("horizontal").onclick=()=>mode="horizontal";
+$("vertical").onclick=()=>mode="vertical";
+
+$("restart").onclick=resetGame;
+$("homeBtn").onclick=()=>show("home");
 
 function resetGame(){
  players=[
- {r:8,c:4,color:"blue",goal:0},
- {r:0,c:4,color:"red",goal:8}
+  {r:8,c:4,color:"blue",goal:0},
+  {r:0,c:4,color:"red",goal:8}
  ];
- walls=[];turn=0;finished=false;mode="move";
+ walls=[];
+ turn=0;
+ finished=false;
+ mode="move";
  draw();
-}
-
-function draw(){
- let b=document.getElementById("board");
- b.innerHTML="";
- for(let r=0;r<9;r++){
-  for(let c=0;c<9;c++){
-   let cell=document.createElement("div");
-   cell.className="cell";
-   players.forEach(p=>{
-    if(p.r===r&&p.c===c)cell.classList.add(p.color);
-   });
-   if(walls.some(w=>w.r===r&&w.c===c))
-    cell.classList.add("wall");
-   cell.onclick=()=>clickCell(r,c);
-   b.appendChild(cell);
-  }
- }
- document.getElementById("status").textContent=
- finished?"GAME OVER":players[turn].color.toUpperCase()+" TURN";
 }
 
 function blocked(r1,c1,r2,c2){
  return walls.some(w=>{
-  if(w.type==="horizontal")
-   return r1!==r2&&Math.min(r1,r2)===w.r&&(c1===w.c||c1===w.c+1);
-  return c1!==c2&&Math.min(c1,c2)===w.c&&(r1===w.r||r1===w.r+1);
+  if(w.type==="horizontal"){
+   return r1!==r2&&Math.min(r1,r2)===w.r&&
+   (c1===w.c||c1===w.c+1);
+  }
+  return c1!==c2&&Math.min(c1,c2)===w.c&&
+  (r1===w.r||r1===w.r+1);
  });
+}
+
+function draw(){
+ $("board").innerHTML="";
+
+ for(let r=0;r<9;r++){
+  for(let c=0;c<9;c++){
+   let cell=document.createElement("div");
+   cell.className="cell";
+
+   players.forEach(p=>{
+    if(p.r===r&&p.c===c)cell.classList.add(p.color);
+   });
+
+   walls.forEach(w=>{
+    if(w.r===r&&w.c===c)cell.classList.add("wall");
+   });
+
+   cell.addEventListener("click",()=>clickCell(r,c));
+   $("board").appendChild(cell);
+  }
+ }
+
+ $("status").textContent=finished?
+ "GAME OVER":
+ (turn===0?"BLUE":"RED")+" PLAYER TURN";
 }
 
 function clickCell(r,c){
  if(finished)return;
+
  let p=players[turn];
 
  if(mode==="move"){
   if(Math.abs(p.r-r)+Math.abs(p.c-c)!==1)return;
   if(blocked(p.r,p.c,r,c))return;
   if(players.some(x=>x.r===r&&x.c===c))return;
-  p.r=r;p.c=c;
+
+  p.r=r;
+  p.c=c;
+
   if(p.r===p.goal){
    finished=true;
+   draw();
    alert(p.color.toUpperCase()+" WINS!");
+   return;
   }
+
  }else{
   if(r>=8||c>=8)return;
   if(walls.some(w=>w.r===r&&w.c===c))return;
+
   walls.push({r,c,type:mode});
  }
 
@@ -148,49 +198,62 @@ function clickCell(r,c){
  draw();
 
  if(gameMode==="robot"&&turn===1&&!finished){
-  setTimeout(robotMove,400);
+  setTimeout(robotMove,350);
  }
 }
 
 function robotMove(){
  if(finished)return;
+
  let p=players[1];
+
  let options=[
- [p.r+1,p.c],[p.r-1,p.c],
- [p.r,p.c+1],[p.r,p.c-1]
+  [p.r+1,p.c],
+  [p.r-1,p.c],
+  [p.r,p.c+1],
+  [p.r,p.c-1]
  ];
+
  options=options.filter(([r,c])=>
   r>=0&&r<9&&c>=0&&c<9&&
   !blocked(p.r,p.c,r,c)&&
   !players.some(x=>x.r===r&&x.c===c)
  );
- if(!options.length)return;
+
+ if(!options.length){
+  turn=0;
+  draw();
+  return;
+ }
+
  options.sort((a,b)=>Math.abs(a[0]-8)-Math.abs(b[0]-8));
+
  let [r,c]=options[0];
- p.r=r;p.c=c;
+ p.r=r;
+ p.c=c;
+
  if(p.r===8){
   finished=true;
+  draw();
   alert("ROBOT WINS!");
+  return;
  }
+
  turn=0;
  draw();
 }
 
-function goHome(){
- document.getElementById("game").classList.add("hidden");
- document.getElementById("home").classList.remove("hidden");
-}
+let saved=localStorage.getItem("neonPlayer");
 
-window.addEventListener("load",()=>{
- let saved=localStorage.getItem("neonPlayer");
- if(saved){
-  name=saved;
-  document.getElementById("login").style.display="none";
-  document.getElementById("home").classList.remove("hidden");
-  document.getElementById("welcome").innerText="Welcome "+name+"!";
- }
-});
+if(saved){
+ username=saved;
+ $("welcome").textContent="WELCOME "+username+"!";
+ show("home");
+}
 </script>
+</body>
+</html>
+```
 </body>
 </html>
 ```
