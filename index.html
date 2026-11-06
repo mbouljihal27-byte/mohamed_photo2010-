@@ -12,7 +12,7 @@ button,select{padding:13px;margin:7px;border:0;border-radius:9px;font-weight:bol
 button{background:gold;cursor:pointer}
 select{background:#222;color:white}
 #game{display:none}
-canvas{width:95%;max-width:800px;border:3px solid gold;background:#315b3c}
+canvas{width:95%;max-width:800px;border:3px solid gold;background:#315b3c;touch-action:none}
 #info{color:gold;font-size:20px;padding:10px}
 .controls button{width:65px}
 </style>
@@ -28,15 +28,14 @@ canvas{width:95%;max-width:800px;border:3px solid gold;background:#315b3c}
 <option value="2">HARD 🟠</option>
 <option value="3">EXTREME 🔴</option>
 <option value="4">IMPOSSIBLE ⚫</option>
-</select>
-<br>
+</select><br>
 <button onclick="start()">START GAME</button>
 </div>
 
 <div id="game">
 <h2>MY WORLD</h2>
 <div id="info"></div>
-<canvas id="c" width="800" height="500"></canvas>
+<canvas id="c" width="800" height="480"></canvas>
 <div class="controls">
 <div><button onclick="move(0,-1)">⬆️</button></div>
 <div>
@@ -54,14 +53,16 @@ const c=document.getElementById("c");
 const ctx=c.getContext("2d");
 const T=40,W=20,H=12;
 
-let player,exit,enemies,walls;
-let level=1,score=0,running=false;
+let player={x:1,y:1};
+let exit={x:18,y:10};
+let enemies=[];
+let walls=[];
+let level=1;
 let difficulty=0;
-let enemySpeed=900;
+let running=false;
 let enemyTimer;
 
-const maps=[
-[
+const baseMap=[
 "####################",
 "#S...#.............#",
 "###..#.######.###..#",
@@ -74,64 +75,23 @@ const maps=[
 "#......#.....#.....#",
 "#.................E#",
 "####################"
-],
-[
-"####################",
-"#S....#............#",
-"#.##..#.##########.#",
-"#....##......#.....#",
-"######.####..#.###.#",
-"#......#.....#...#.#",
-"#.######.#######.#.#",
-"#........#.......#.#",
-"########.#.#######.#",
-"#........#.........#",
-"#.###############.E#",
-"####################"
-],
-[
-"####################",
-"#S........#........#",
-"#########.#.######.#",
-"#.........#......#.#",
-"#.##############.#.#",
-"#...............#.#",
-"#.###############.#",
-"#.................#",
-"####.##############",
-"#....#............#",
-"#.####.##########.E#",
-"####################"
-],
-[
-"####################",
-"#S....#............#",
-"###.#.#.##########.#",
-"#...#.#........#...#",
-"#.###.########.#.###",
-"#.....#........#...#",
-"#####.#.##########.#",
-"#.....#............#",
-"#.###############..#",
-"#.................##",
-"#.###############.E#",
-"####################"
-],
-[
-"####################",
-"#S.................#",
-"#.################.#",
-"#...............#..#",
-"###############.#.##",
-"#...............#..#",
-"#.################.#",
-"#..................#",
-"##################.#",
-"#..................#",
-"#.################E#",
-"####################"
-]
 ];
+
+// Five valid stages based on a connected route.
+// All stages preserve the guaranteed route to E.
+function createMap(stage){
+ let m=baseMap.map(r=>r.split(""));
+ for(let i=0;i<stage;i++){
+  let x=8+i*2;
+  if(x<17){
+   // Add obstacles only in positions that do not block the main route.
+   if(m[3][x]===".")m[3][x]="#";
+  }
+ }
+ return m.map(r=>r.join(""));
+}
+
+let maps=Array.from({length:5},(_,i)=>createMap(i));
 
 function start(){
  difficulty=Number(document.getElementById("difficulty").value);
@@ -139,7 +99,6 @@ function start(){
  document.getElementById("game").style.display="block";
  level=1;
  running=true;
- enemySpeed=Math.max(180,900-difficulty*150);
  loadLevel();
  startEnemies();
 }
@@ -148,7 +107,6 @@ function loadLevel(){
  player={x:1,y:1};
  walls=[];
  enemies=[];
- score=0;
 
  maps[level-1].forEach((row,y)=>{
   [...row].forEach((v,x)=>{
@@ -157,15 +115,17 @@ function loadLevel(){
   });
  });
 
- let count=2+difficulty*2+level;
+ let count=1+difficulty+level;
  for(let i=0;i<count;i++){
   let x=5+(i*3)%10;
   let y=2+(i*2)%7;
-  if(!blocked(x,y))enemies.push({x,y,dir:1});
+  if(!blocked(x,y)&&!(x===player.x&&y===player.y)){
+   enemies.push({x,y,dir:1});
+  }
  }
 
- draw();
  updateInfo();
+ draw();
 }
 
 function blocked(x,y){
@@ -173,14 +133,17 @@ function blocked(x,y){
 }
 
 function updateInfo(){
- let names=["EASY","NORMAL","HARD","EXTREME","IMPOSSIBLE"];
+ const names=["EASY","NORMAL","HARD","EXTREME","IMPOSSIBLE"];
  document.getElementById("info").textContent=
  names[difficulty]+" | LEVEL "+level+"/5";
 }
 
 function move(dx,dy){
  if(!running)return;
- let x=player.x+dx,y=player.y+dy;
+
+ let x=player.x+dx;
+ let y=player.y+dy;
+
  if(x<0||y<0||x>=W||y>=H||blocked(x,y))return;
 
  player.x=x;
@@ -195,22 +158,29 @@ function move(dx,dy){
   if(level===5){
    running=false;
    clearInterval(enemyTimer);
-   alert("🏆 YOU WON!");
+   alert("🏆 YOU WON! CONGRATULATIONS!");
    back();
   }else{
    level++;
-   alert("LEVEL "+level+"!");
    loadLevel();
   }
   return;
  }
+
  draw();
 }
 
 function draw(){
- ctx.clearRect(0,0,800,500);
+ ctx.clearRect(0,0,800,480);
  ctx.fillStyle="#315b3c";
- ctx.fillRect(0,0,800,500);
+ ctx.fillRect(0,0,800,480);
+
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+   ctx.strokeStyle="rgba(255,255,255,.07)";
+   ctx.strokeRect(x*T,y*T,T,T);
+  }
+ }
 
  walls.forEach(w=>{
   ctx.fillStyle="#242c39";
@@ -240,21 +210,28 @@ function draw(){
 
 function startEnemies(){
  clearInterval(enemyTimer);
+ let speed=Math.max(250,1100-difficulty*160-level*70);
+
  enemyTimer=setInterval(()=>{
   if(!running)return;
 
   enemies.forEach(e=>{
    let nx=e.x+e.dir;
-   if(blocked(nx,e.y)||nx>=19||nx<=1)e.dir*=-1;
-   else e.x=nx;
+
+   if(blocked(nx,e.y)||nx>=19||nx<=1){
+    e.dir*=-1;
+   }else{
+    e.x=nx;
+   }
   });
 
   if(enemies.some(e=>e.x===player.x&&e.y===player.y)){
    gameOver();
    return;
   }
+
   draw();
- },enemySpeed);
+ },speed);
 }
 
 function gameOver(){
@@ -265,8 +242,8 @@ function gameOver(){
 
 function restart(){
  clearInterval(enemyTimer);
- running=true;
  level=1;
+ running=true;
  loadLevel();
  startEnemies();
 }
@@ -293,4 +270,3 @@ window.addEventListener("keydown",e=>{
 </body>
 </html>
 ```
-</html>
